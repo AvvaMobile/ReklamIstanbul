@@ -1,0 +1,10 @@
+# Endpoint ayarları
+ENDPOINT_URL=http://localhost:8000/api/count
+ENDPOINT_API_KEY=your_api_key_here
+
+# Debug ayarları
+DEBUG=False
+
+# Cihaz ayarları (opsiyonel)
+DEVICE_ID=camera_001
+LOCATION=main_entrance 

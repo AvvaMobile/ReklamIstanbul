@@ -1,0 +1,11 @@
+opencv-python==4.8.1.78
+ultralytics==8.0.196
+numpy==1.24.3
+requests==2.31.0
+schedule==1.2.0
+python-dotenv==1.0.0
+flask==2.3.3
+torch>=1.9.0
+torchvision>=0.10.0
+Pillow>=8.0.0
+psutil>=5.8.0 
