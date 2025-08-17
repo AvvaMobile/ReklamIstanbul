@@ -1,0 +1,28 @@
+# Windows için optimize edilmiş requirements
+# Zip error'ları önlemek için alternatif paketler
+
+# Temel paketler
+wheel>=0.37.0
+setuptools>=65.0.0
+
+# OpenCV alternatifleri (zip error önleme)
+opencv-python-headless>=4.8.0
+# Eğer yukarıdaki çalışmazsa: opencv-python>=4.8.0
+
+# Torch CPU versiyonu (daha az sorun)
+--find-links https://download.pytorch.org/whl/cpu
+torch>=1.9.0+cpu
+torchvision>=0.10.0+cpu
+
+# Diğer paketler
+ultralytics>=8.0.0
+numpy>=1.24.0
+requests>=2.31.0
+schedule>=1.2.0
+python-dotenv>=1.0.0
+flask>=2.3.0
+Pillow>=8.0.0
+psutil>=5.8.0
+
+# Windows için ek paketler
+pywin32>=305; sys_platform == "win32"

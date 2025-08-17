@@ -124,7 +124,48 @@ python3 test_endpoint.py
 
 ## ⚠️ Olası Sorunlar ve Çözümleri
 
-### 1. OpenCV Hatası
+### 1. Windows Zip Error Hatası
+Windows'ta pip kurulum sırasında "zip error" hatası alırsanız:
+
+#### **A) Otomatik Çözüm:**
+```bash
+# Zip error çözüm script'ini çalıştır
+fix_windows_zip_error.bat
+```
+
+#### **B) Manuel Çözüm:**
+```bash
+# 1. Pip cache temizle
+pip cache purge
+
+# 2. Pip güncelle
+python -m pip install --upgrade pip
+
+# 3. Wheel kur
+pip install wheel
+
+# 4. Windows için özel requirements kullan
+pip install -r requirements_windows.txt
+```
+
+#### **C) Alternatif Kurulum:**
+```bash
+# Her paketi tek tek kur
+pip install opencv-python-headless
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+pip install ultralytics
+pip install numpy
+pip install flask
+# ... diğer paketler
+```
+
+#### **D) Visual C++ Redistributable:**
+Windows'ta C++ paketleri eksik olabilir:
+1. [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe) indir
+2. Kur ve bilgisayarı yeniden başlat
+3. Pip kurulumunu tekrar dene
+
+### 2. OpenCV Hatası
 ```bash
 # Windows'ta
 pip uninstall opencv-python
@@ -134,25 +175,25 @@ pip install opencv-python-headless
 brew install opencv
 ```
 
-### 2. Torch Hatası
+### 3. Torch Hatası
 ```bash
 # CPU versiyonu kur
 pip uninstall torch torchvision
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 ```
 
-### 3. Permission Hatası (macOS)
+### 4. Permission Hatası (macOS)
 1. **Sistem Tercihleri** > **Güvenlik ve Gizlilik** > **Ekran Kaydı**
 2. Terminal/Python uygulamasına izin ver
 3. Uygulamayı yeniden başlat
 
-### 4. CUDA Hatası
+### 5. CUDA Hatası
 ```bash
 # config.py'de GPU kullanımını kapat
 USE_GPU = False
 ```
 
-### 5. Model Dosyası Hatası
+### 6. Model Dosyası Hatası
 ```bash
 # Model dosyalarını kontrol et
 ls -la *.pt

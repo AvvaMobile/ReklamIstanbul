@@ -5,7 +5,7 @@ echo ========================================
 echo.
 
 REM Python versiyon kontrolü
-echo [1/5] Python versiyon kontrolu...
+echo [1/6] Python versiyon kontrolu...
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo ERROR: Python bulunamadi!
@@ -19,7 +19,7 @@ python --version
 
 REM Virtual environment oluştur
 echo.
-echo [2/5] Virtual environment olusturuluyor...
+echo [2/6] Virtual environment olusturuluyor...
 if exist venv (
     echo Virtual environment zaten mevcut.
 ) else (
@@ -34,7 +34,7 @@ if exist venv (
 
 REM Virtual environment aktifleştir
 echo.
-echo [3/5] Virtual environment aktiflestiriliyor...
+echo [3/6] Virtual environment aktiflestiriliyor...
 call venv\Scripts\activate.bat
 if %errorlevel% neq 0 (
     echo ERROR: Virtual environment aktiflestirilemedi!
@@ -43,26 +43,56 @@ if %errorlevel% neq 0 (
 )
 echo Virtual environment aktiflestirildi.
 
-REM Dependencies kur
+REM Pip güncelleme ve cache temizleme
 echo.
-echo [4/5] Dependencies kuruluyor...
-pip install -r requirements.txt
-if %errorlevel% neq 0 (
-    echo ERROR: Dependencies kurulamadi!
-    echo Internet baglantinizi kontrol edin.
-    pause
-    exit /b 1
-)
-echo Dependencies kuruldu.
+echo [4/6] Pip guncelleniyor ve cache temizleniyor...
+pip install --upgrade pip
+pip cache purge
+echo Pip guncellendi ve cache temizlendi.
 
-REM Sistem testi
+REM Wheel ve temel paketler
 echo.
-echo [5/5] Sistem testi yapiliyor...
-python quick_start.py
+echo [5/6] Temel paketler kuruluyor...
+pip install wheel
+pip install setuptools --upgrade
+
+REM Alternatif kurulum yöntemi - zip error'ları önlemek için
+echo.
+echo [6/6] Ana paketler kuruluyor (zip error onleme ile)...
+
+REM OpenCV - alternatif yöntem
+echo OpenCV kuruluyor...
+pip install opencv-python-headless
+if %errorlevel% neq 0 (
+    echo OpenCV alternatif yontem deneniyor...
+    pip install opencv-python
+)
+
+REM Torch - CPU versiyonu (daha az sorun)
+echo Torch kuruluyor...
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+REM Diğer paketler
+echo Diger paketler kuruluyor...
+pip install ultralytics
+pip install numpy
+pip install requests
+pip install schedule
+pip install python-dotenv
+pip install flask
+pip install Pillow
+pip install psutil
+
 if %errorlevel% neq 0 (
     echo.
-    echo WARNING: Sistem testinde sorunlar var!
-    echo Log dosyalarini kontrol edin.
+    echo WARNING: Bazı paketler kurulamadi!
+    echo Manuel kurulum gerekebilir.
+    echo.
+    echo Alternatif çözümler:
+    echo 1. pip install --upgrade pip
+    echo 2. pip cache purge
+    echo 3. Her paketi tek tek kur
+    echo.
 ) else (
     echo.
     echo ========================================
@@ -77,3 +107,4 @@ if %errorlevel% neq 0 (
 )
 
 pause
+
