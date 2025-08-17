@@ -30,21 +30,42 @@ Gelişmiş performans optimizasyonları ve ekran yakalama desteği ile insan say
 
 ## 📦 Kurulum
 
-### Gereksinimler
+### 🚀 Hızlı Kurulum
+
+#### Windows
 ```bash
+# Otomatik kurulum (çift tıklayın)
+install_windows.bat
+
+# Manuel kurulum
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### GPU Desteği (Opsiyonel)
+#### macOS/Linux
 ```bash
-# CUDA destekli PyTorch kurulumu
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+# Otomatik kurulum
+./install_unix.sh
+
+# Manuel kurulum
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### Ekran Yakalama İzinleri (macOS)
-1. **Sistem Tercihleri** > **Güvenlik ve Gizlilik** > **Ekran Kaydı**
-2. Python/Terminal uygulamasına izin verin
-3. Uygulamayı yeniden başlatın
+### 🧪 Sistem Testi
+```bash
+# Hızlı sistem testi
+python3 quick_start.py
+
+# Manuel test
+python3 test_screen_capture.py
+python3 performance_test.py
+```
+
+### 📚 Detaylı Kurulum
+Detaylı kurulum rehberi için [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) dosyasını inceleyin.
 
 ## ⚙️ Konfigürasyon
 
