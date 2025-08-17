@@ -46,8 +46,12 @@ class HumanDetector:
             if self.frame_count % Config.PROCESS_EVERY_N_FRAMES != 0:
                 return []
             
-            # Frame'i optimize et
-            frame_resized = cv2.resize(frame, (640, 480)) if frame.shape[:2] != (480, 640) else frame
+            # Frame'i optimize et - Config'deki boyutları kullan
+            target_size = (Config.FRAME_WIDTH, Config.FRAME_HEIGHT)
+            if frame.shape[:2] != target_size[::-1]:  # OpenCV (height, width) formatı
+                frame_resized = cv2.resize(frame, target_size)
+            else:
+                frame_resized = frame
             
             # Model parametrelerini optimize et
             results = self.model(
@@ -70,9 +74,9 @@ class HumanDetector:
                             x1, y1, x2, y2 = box.xyxy[0].tolist()
                             
                             # Orijinal frame boyutuna geri dönüştür
-                            if frame.shape[:2] != (480, 640):
-                                h_scale = frame.shape[0] / 480
-                                w_scale = frame.shape[1] / 640
+                            if frame.shape[:2] != target_size[::-1]:
+                                h_scale = frame.shape[0] / target_size[1]  # height
+                                w_scale = frame.shape[1] / target_size[0]  # width
                                 x1 = int(x1 * w_scale)
                                 y1 = int(y1 * h_scale)
                                 x2 = int(x2 * w_scale)

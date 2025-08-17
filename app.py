@@ -85,9 +85,9 @@ def initialize_system():
         video_source = screen_capture
     else:
         video_source = cv2.VideoCapture(current_config['camera_index'])
-        video_source.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        video_source.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        video_source.set(cv2.CAP_PROP_FPS, 30)
+        video_source.set(cv2.CAP_PROP_FRAME_WIDTH, Config.FRAME_WIDTH)  # Config'den al
+        video_source.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.FRAME_HEIGHT)  # Config'den al
+        video_source.set(cv2.CAP_PROP_FPS, Config.SCREEN_CAPTURE_FPS)  # Config'den al
     
     logger.info("Sistem başlatıldı")
 
@@ -145,7 +145,9 @@ def generate_frames():
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
             
-            time.sleep(0.03)  # ~30 FPS
+            # FPS kontrolü - Config'den al
+            target_fps = Config.SCREEN_CAPTURE_FPS
+            time.sleep(1.0 / target_fps)  # Dinamik FPS kontrolü
             
         except Exception as e:
             logger.error(f"Frame üretme hatası: {e}")

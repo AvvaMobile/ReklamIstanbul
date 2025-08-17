@@ -53,29 +53,37 @@ class ScreenCapture:
         self.logger.info("Ekran yakalama durduruldu")
     
     def _capture_loop(self):
-        """Sürekli ekran yakalama döngüsü"""
+        """Sürekli ekran yakalama döngüsü - Optimize edilmiş"""
+        last_capture_time = time.time()
+        target_interval = 1.0 / Config.SCREEN_CAPTURE_FPS
+        
         while self.is_running:
-            try:
-                # Ekran görüntüsü al
-                if self.region:
-                    screenshot = ImageGrab.grab(bbox=self.region)
-                else:
-                    screenshot = ImageGrab.grab()
-                
-                # PIL'den OpenCV formatına dönüştür
-                frame = np.array(screenshot)
-                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                
-                # Frame'i güncelle
-                with self.frame_lock:
-                    self.current_frame = frame
-                
-                # FPS kontrolü
-                time.sleep(1.0 / Config.SCREEN_CAPTURE_FPS)
-                
-            except Exception as e:
-                self.logger.error(f"Ekran yakalama hatası: {e}")
-                time.sleep(0.1)
+            current_time = time.time()
+            
+            # FPS kontrolü - time.sleep yerine daha verimli
+            if current_time - last_capture_time >= target_interval:
+                try:
+                    # Ekran görüntüsü al
+                    if self.region:
+                        screenshot = ImageGrab.grab(bbox=self.region)
+                    else:
+                        screenshot = ImageGrab.grab()
+                    
+                    # PIL'den OpenCV formatına dönüştür
+                    frame = np.array(screenshot)
+                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                    
+                    # Frame'i güncelle
+                    with self.frame_lock:
+                        self.current_frame = frame
+                    
+                    last_capture_time = current_time
+                    
+                except Exception as e:
+                    self.logger.error(f"Ekran yakalama hatası: {e}")
+            
+            # CPU kullanımını azalt - 1ms sleep
+            time.sleep(0.001)
     
     def read(self):
         """

@@ -79,8 +79,8 @@ def setup_video_source(logger):
         )
         screen_capture.start_capture()
         
-        # İlk frame'i bekle
-        time.sleep(1)
+        # İlk frame'i bekle - süreyi kısalt
+        time.sleep(0.5)  # 1 saniyeden 0.5 saniyeye düşür
         
         logger.info("Ekran yakalama başlatıldı")
         return screen_capture
@@ -93,7 +93,7 @@ def setup_video_source(logger):
         cap = cv2.VideoCapture(Config.CAMERA_INDEX)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, Config.FRAME_WIDTH)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.FRAME_HEIGHT)
-        cap.set(cv2.CAP_PROP_FPS, 30)
+        cap.set(cv2.CAP_PROP_FPS, Config.SCREEN_CAPTURE_FPS)  # Config'den FPS al
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         
         if not cap.isOpened():

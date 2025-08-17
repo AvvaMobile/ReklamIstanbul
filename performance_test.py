@@ -24,8 +24,8 @@ def test_detection_performance():
     logger = setup_logging()
     logger.info("Tespit performans testi başlatılıyor...")
     
-    # Test görüntüsü oluştur
-    test_frame = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
+    # Test görüntüsü oluştur - Config'deki boyutları kullan
+    test_frame = np.random.randint(0, 255, (Config.FRAME_HEIGHT, Config.FRAME_WIDTH, 3), dtype=np.uint8)
     
     # Detector'ı başlat
     detector = HumanDetector()
@@ -47,6 +47,8 @@ def test_detection_performance():
     logger.info(f"Toplam süre: {total_time:.2f} saniye")
     logger.info(f"Ortalama süre: {avg_time:.4f} saniye/frame")
     logger.info(f"FPS: {1/avg_time:.1f}")
+    logger.info(f"Model: {Config.MODEL_PATH}")
+    logger.info(f"Frame boyutu: {Config.FRAME_WIDTH}x{Config.FRAME_HEIGHT}")
     
     return avg_time
 
@@ -154,50 +156,93 @@ def test_camera_performance():
     
     return avg_time
 
-def run_all_tests():
-    """Tüm performans testlerini çalıştırır"""
+def test_screen_capture_performance():
+    """Ekran yakalama performansını test eder"""
     logger = setup_logging()
-    logger.info("Tüm performans testleri başlatılıyor...")
+    logger.info("Ekran yakalama performans testi başlatılıyor...")
     
-    results = {}
-    
-    # Tespit performans testi
     try:
-        results['detection_time'] = test_detection_performance()
-    except Exception as e:
-        logger.error(f"Tespit testi başarısız: {e}")
-        results['detection_time'] = None
+        from screen_capture import ScreenCapture
+        
+        # Ekran yakalama başlat
+        capture = ScreenCapture()
+        capture.start_capture()
+        
+        # Test süresi
+        test_duration = 10  # 10 saniye
+        frame_count = 0
+        start_time = time.time()
+        
+        while time.time() - start_time < test_duration:
+            ret, frame = capture.read()
+            if ret:
+                frame_count += 1
+            time.sleep(0.001)  # 1ms sleep
+        
+        capture.stop_capture()
+        
+        actual_fps = frame_count / test_duration
+        target_fps = Config.SCREEN_CAPTURE_FPS
+        
+        logger.info(f"Ekran yakalama performans testi tamamlandı:")
+        logger.info(f"Hedef FPS: {target_fps}")
+        logger.info(f"Gerçek FPS: {actual_fps:.1f}")
+        logger.info(f"Frame sayısı: {frame_count}")
+        logger.info(f"Test süresi: {test_duration} saniye")
+        
+        return actual_fps
+        
+    except ImportError:
+        logger.warning("Screen capture modülü bulunamadı, test atlandı")
+        return 0
+
+def compare_performance():
+    """Farklı konfigürasyonlarda performans karşılaştırması"""
+    logger = setup_logging()
+    logger.info("Performans karşılaştırma testi başlatılıyor...")
     
-    # Sayaç performans testi
-    try:
-        results['counter_time'] = test_counter_performance()
-    except Exception as e:
-        logger.error(f"Sayaç testi başarısız: {e}")
-        results['counter_time'] = None
+    # Mevcut konfigürasyon
+    logger.info("=== MEVCUT KONFİGÜRASYON ===")
+    logger.info(f"Model: {Config.MODEL_PATH}")
+    logger.info(f"Frame boyutu: {Config.FRAME_WIDTH}x{Config.FRAME_HEIGHT}")
+    logger.info(f"Ekran yakalama FPS: {Config.SCREEN_CAPTURE_FPS}")
+    logger.info(f"Frame işleme: Her {Config.PROCESS_EVERY_N_FRAMES} frame'den 1'i")
     
-    # Bellek kullanım testi
-    try:
-        results['memory_usage'] = test_memory_usage()
-    except Exception as e:
-        logger.error(f"Bellek testi başarısız: {e}")
-        results['memory_usage'] = None
+    # Tespit performansı
+    detection_time = test_detection_performance()
     
-    # Kamera performans testi
-    try:
-        results['camera_time'] = test_camera_performance()
-    except Exception as e:
-        logger.error(f"Kamera testi başarısız: {e}")
-        results['camera_time'] = None
+    # Ekran yakalama performansı
+    capture_fps = test_screen_capture_performance()
     
-    # Sonuçları raporla
-    logger.info("=== PERFORMANS TEST SONUÇLARI ===")
-    for test_name, result in results.items():
-        if result is not None:
-            logger.info(f"{test_name}: {result}")
-        else:
-            logger.info(f"{test_name}: BAŞARISIZ")
+    # Toplam performans hesaplama
+    if Config.USE_SCREEN_CAPTURE:
+        effective_fps = capture_fps / Config.PROCESS_EVERY_N_FRAMES
+        logger.info(f"=== PERFORMANS SONUÇLARI ===")
+        logger.info(f"Ekran yakalama FPS: {capture_fps:.1f}")
+        logger.info(f"İşlenen frame FPS: {effective_fps:.1f}")
+        logger.info(f"Tespit süresi: {detection_time:.4f} saniye/frame")
+        logger.info(f"Toplam gecikme: {detection_time + (1/effective_fps):.4f} saniye")
+    else:
+        logger.info("Kamera modu - ekran yakalama testi atlandı")
     
-    return results
+    return {
+        'detection_time': detection_time,
+        'capture_fps': capture_fps,
+        'effective_fps': capture_fps / Config.PROCESS_EVERY_N_FRAMES if Config.USE_SCREEN_CAPTURE else 0
+    }
 
 if __name__ == "__main__":
-    run_all_tests() 
+    # Ana performans testi
+    print("🚀 AvvaImageAI Performans Testi Başlatılıyor...")
+    print("=" * 50)
+    
+    results = compare_performance()
+    
+    print("\n" + "=" * 50)
+    print("📊 TEST SONUÇLARI:")
+    print(f"Tespit süresi: {results['detection_time']:.4f} saniye/frame")
+    print(f"Ekran yakalama FPS: {results['capture_fps']:.1f}")
+    if results['effective_fps'] > 0:
+        print(f"Etkili FPS: {results['effective_fps']:.1f}")
+    
+    print("\n✅ Test tamamlandı!") 
