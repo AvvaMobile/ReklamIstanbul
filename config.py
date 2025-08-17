@@ -55,4 +55,29 @@ class Config:
     
     # GPU kullanımı - macOS için CPU varsayılan
     USE_GPU = os.getenv('USE_GPU', 'False').lower() == 'true'  # macOS için False
-    DEVICE = 'cuda' if USE_GPU and torch.cuda.is_available() else 'cpu' 
+    DEVICE = 'cuda' if USE_GPU and torch.cuda.is_available() else 'cpu'
+    
+    # Network Kamera Desteği - Switch üzerinden bağlı kameralar
+    USE_NETWORK_CAMERAS = os.getenv('USE_NETWORK_CAMERAS', 'False').lower() == 'true'
+    NETWORK_CAMERAS = {
+        'camera_1': {
+            'url': os.getenv('CAMERA_1_URL', '192.168.1.100'),
+            'type': os.getenv('CAMERA_1_TYPE', 'auto'),  # 'rtsp', 'http', 'ip', 'auto'
+            'username': os.getenv('CAMERA_1_USERNAME', None),
+            'password': os.getenv('CAMERA_1_PASSWORD', None),
+            'enabled': True
+        },
+        'camera_2': {
+            'url': os.getenv('CAMERA_2_URL', '192.168.1.101'),
+            'type': os.getenv('CAMERA_2_TYPE', 'auto'),
+            'username': os.getenv('CAMERA_2_USERNAME', None),
+            'password': os.getenv('CAMERA_2_PASSWORD', None),
+            'enabled': False
+        }
+    }
+    
+    # Network kamera performans ayarları
+    NETWORK_CAMERA_FPS = 30
+    NETWORK_CAMERA_BUFFER_SIZE = 1
+    NETWORK_CAMERA_TIMEOUT = 5000  # ms
+    NETWORK_CAMERA_RECONNECT_INTERVAL = 5  # saniye 

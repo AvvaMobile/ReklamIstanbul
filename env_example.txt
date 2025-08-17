@@ -7,4 +7,25 @@ DEBUG=False
 
 # Cihaz ayarları (opsiyonel)
 DEVICE_ID=camera_001
-LOCATION=main_entrance 
+LOCATION=main_entrance
+
+# Network Kamera Ayarları - Switch üzerinden bağlı kameralar
+USE_NETWORK_CAMERAS=True
+
+# Kamera 1
+CAMERA_1_URL=192.168.1.100
+CAMERA_1_TYPE=auto
+CAMERA_1_USERNAME=admin
+CAMERA_1_PASSWORD=password123
+
+# Kamera 2
+CAMERA_2_URL=rtsp://192.168.1.101:554/stream1
+CAMERA_2_TYPE=rtsp
+CAMERA_2_USERNAME=admin
+CAMERA_2_PASSWORD=password123
+
+# Kamera 3
+CAMERA_3_URL=http://192.168.1.102:8080/video
+CAMERA_3_TYPE=http
+CAMERA_3_USERNAME=
+CAMERA_3_PASSWORD= 

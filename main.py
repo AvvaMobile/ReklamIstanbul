@@ -17,18 +17,32 @@ except ImportError:
     SCREEN_CAPTURE_AVAILABLE = False
     print("Uyarı: screen_capture modülü bulunamadı. Ekran yakalama özelliği devre dışı.")
 
+# Network kamera modülünü import et
+try:
+    from network_camera import NetworkCameraManager
+    NETWORK_CAMERA_AVAILABLE = True
+except ImportError:
+    NETWORK_CAMERA_AVAILABLE = False
+    print("Uyarı: network_camera modülü bulunamadı. Network kamera özelliği devre dışı.")
+
 # Global değişkenler
 counter = None
 running = True
 screen_capture = None
+network_camera_manager = None
 
 def signal_handler(sig, frame):
     """
     Program kapatılırken verileri kaydet
     """
-    global running, screen_capture
+    global running, screen_capture, network_camera_manager
     print('\nProgram kapatılıyor...')
     running = False
+    
+    # Network kameraları durdur
+    if network_camera_manager:
+        network_camera_manager.stop_all()
+        print("Network kameralar durduruldu")
     
     # Ekran yakalamayı durdur
     if screen_capture:
@@ -68,8 +82,35 @@ def test_camera(camera_index):
 
 def setup_video_source(logger):
     """
-    Video kaynağını ayarlar (kamera veya ekran yakalama)
+    Video kaynağını ayarlar (kamera, ekran yakalama veya network kamera)
     """
+    if Config.USE_NETWORK_CAMERAS and NETWORK_CAMERA_AVAILABLE:
+        # Network kamera kullan
+        global network_camera_manager
+        network_camera_manager = NetworkCameraManager()
+        
+        # Konfigürasyondaki kameraları ekle
+        for camera_id, camera_config in Config.NETWORK_CAMERAS.items():
+            if camera_config.get('enabled', False):
+                camera = network_camera_manager.add_camera(
+                    camera_id,
+                    camera_config['url'],
+                    camera_config['type'],
+                    camera_config.get('username'),
+                    camera_config.get('password')
+                )
+                
+                if camera.start_capture():
+                    logger.info(f"Network kamera {camera_id} başlatıldı: {camera_config['url']}")
+                else:
+                    logger.warning(f"Network kamera {camera_id} başlatılamadı: {camera_config['url']}")
+        
+        if network_camera_manager.get_all_cameras():
+            logger.info("Network kamera sistemi başlatıldı")
+            return network_camera_manager
+        else:
+            logger.warning("Hiçbir network kamera başlatılamadı, ekran yakalama kullanılıyor")
+    
     if Config.USE_SCREEN_CAPTURE and SCREEN_CAPTURE_AVAILABLE:
         # Ekran yakalama kullan
         global screen_capture
@@ -93,7 +134,8 @@ def setup_video_source(logger):
         cap = cv2.VideoCapture(Config.CAMERA_INDEX)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, Config.FRAME_WIDTH)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.FRAME_HEIGHT)
-        cap.set(cv2.CAP_PROP_FPS, Config.SCREEN_CAPTURE_FPS)  # Config'den FPS al
+        # FPS kısıtlaması yok - maksimum hızda çalış
+        cap.set(cv2.CAP_PROP_FPS, 0)  # 0 = maksimum FPS
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         
         if not cap.isOpened():
@@ -132,7 +174,14 @@ def main():
         logger.warning("Endpoint bağlantısı başarısız - veriler sadece yerel olarak kaydedilecek")
     
     # Video kaynağı bilgilerini logla
-    if Config.USE_SCREEN_CAPTURE:
+    if Config.USE_NETWORK_CAMERAS and network_camera_manager:
+        logger.info("İnsan sayma sistemi başlatıldı (Network kamera modu)")
+        cameras = network_camera_manager.get_all_cameras()
+        logger.info(f"Toplam {len(cameras)} network kamera aktif")
+        for camera_id, camera in cameras.items():
+            info = camera.get_camera_info()
+            logger.info(f"  - {camera_id}: {info['url']} ({info['type']})")
+    elif Config.USE_SCREEN_CAPTURE:
         logger.info("İnsan sayma sistemi başlatıldı (Ekran yakalama modu)")
         screen_info = screen_capture.get_screen_info()
         logger.info(f"Ekran boyutu: {screen_info['width']}x{screen_info['height']}")
@@ -155,13 +204,30 @@ def main():
     previous_detections = []
     
     while running:
-        # Frame oku
-        if Config.USE_SCREEN_CAPTURE:
+        # Frame oku - Network kamera, ekran yakalama veya kamera
+        if Config.USE_NETWORK_CAMERAS and network_camera_manager:
+            # Network kamera'dan frame al (ilk aktif kameradan)
+            cameras = network_camera_manager.get_all_cameras()
+            frame = None
+            
+            for camera_id, camera in cameras.items():
+                if camera.is_running:
+                    ret, cam_frame = camera.read()
+                    if ret:
+                        frame = cam_frame
+                        break
+            
+            if frame is None:
+                logger.warning("Network kamera'dan frame alınamıyor!")
+                time.sleep(0.1)
+                continue
+                
+        elif Config.USE_SCREEN_CAPTURE:
             ret, frame = video_source.read()
         else:
             ret, frame = video_source.read()
         
-        if not ret:
+        if frame is None:
             logger.error("Frame okunamadı!")
             break
         
