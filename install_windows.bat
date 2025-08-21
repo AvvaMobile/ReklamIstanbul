@@ -1,11 +1,12 @@
 @echo off
 echo ========================================
 echo    AvvaImageAI - Windows Kurulum
+echo    SUNAPI Kamera Desteği Dahil
 echo ========================================
 echo.
 
 REM Python versiyon kontrolü
-echo [1/6] Python versiyon kontrolu...
+echo [1/7] Python versiyon kontrolu...
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo ERROR: Python bulunamadi!
@@ -19,7 +20,7 @@ python --version
 
 REM Virtual environment oluştur
 echo.
-echo [2/6] Virtual environment olusturuluyor...
+echo [2/7] Virtual environment olusturuluyor...
 if exist venv (
     echo Virtual environment zaten mevcut.
 ) else (
@@ -34,7 +35,7 @@ if exist venv (
 
 REM Virtual environment aktifleştir
 echo.
-echo [3/6] Virtual environment aktiflestiriliyor...
+echo [3/7] Virtual environment aktiflestiriliyor...
 call venv\Scripts\activate.bat
 if %errorlevel% neq 0 (
     echo ERROR: Virtual environment aktiflestirilemedi!
@@ -45,20 +46,20 @@ echo Virtual environment aktiflestirildi.
 
 REM Pip güncelleme ve cache temizleme
 echo.
-echo [4/6] Pip guncelleniyor ve cache temizleniyor...
+echo [4/7] Pip guncelleniyor ve cache temizleniyor...
 pip install --upgrade pip
 pip cache purge
 echo Pip guncellendi ve cache temizlendi.
 
 REM Wheel ve temel paketler
 echo.
-echo [5/6] Temel paketler kuruluyor...
+echo [5/7] Temel paketler kuruluyor...
 pip install wheel
 pip install setuptools --upgrade
 
-REM Alternatif kurulum yöntemi - zip error'ları önlemek için
+REM Ana paketler kurulumu
 echo.
-echo [6/6] Ana paketler kuruluyor (zip error onleme ile)...
+echo [6/7] Ana paketler kuruluyor (zip error onleme ile)...
 
 REM OpenCV - alternatif yöntem
 echo OpenCV kuruluyor...
@@ -72,8 +73,8 @@ REM Torch - CPU versiyonu (daha az sorun)
 echo Torch kuruluyor...
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
-REM Diğer paketler
-echo Diger paketler kuruluyor...
+REM Temel paketler
+echo Temel paketler kuruluyor...
 pip install ultralytics
 pip install numpy
 pip install requests
@@ -83,6 +84,28 @@ pip install flask
 pip install Pillow
 pip install psutil
 
+REM SUNAPI Kamera Desteği için ek paketler
+echo.
+echo SUNAPI kamera desteği paketleri kuruluyor...
+pip install urllib3
+pip install certifi
+pip install chardet
+pip install idna
+
+REM Network kamera ve streaming paketleri
+echo Network kamera paketleri kuruluyor...
+pip install av
+pip install pysrt
+pip install websockets
+
+REM Test ve geliştirme paketleri
+echo Test ve geliştirme paketleri kuruluyor...
+pip install pytest
+pip install pytest-cov
+pip install black
+pip install flake8
+
+REM Kurulum kontrolü
 if %errorlevel% neq 0 (
     echo.
     echo WARNING: Bazı paketler kurulamadi!
@@ -99,12 +122,60 @@ if %errorlevel% neq 0 (
     echo    Kurulum basarili!
     echo ========================================
     echo.
+    echo SUNAPI Kamera Desteği Kuruldu!
+    echo.
     echo Kullanim:
-    echo - Kamera modu: python main.py
+    echo - Ana sistem: python main.py
     echo - Web arayuzu: python app.py
-    echo - Test: python quick_start.py
+    echo - Hizli test: python quick_start.py
+    echo - SUNAPI test: python test_sunaapi_camera.py
+    echo - Entegrasyon test: python test_sunaapi_integration.py
+    echo - Demo: python demo_sunaapi_camera.py
+    echo.
+    echo SUNAPI Kamera Konfigurasyonu:
+    echo 1. config.py dosyasinda kamera IP adresini guncelleyin
+    echo 2. .env dosyasinda kamera bilgilerini ayarlayin
+    echo 3. test_sunaapi_camera.py ile baglantiyi test edin
     echo.
 )
 
-pause
+REM Kurulum sonrası konfigürasyon
+echo.
+echo [7/7] Konfigurasyon dosyalari olusturuluyor...
 
+REM .env dosyası oluştur (eğer yoksa)
+if not exist .env (
+    echo .env dosyasi olusturuluyor...
+    copy env_example.txt .env >nul
+    echo .env dosyasi olusturuldu.
+) else (
+    echo .env dosyasi zaten mevcut.
+)
+
+REM Konfigürasyon testi
+echo.
+echo Konfigurasyon testi yapiliyor...
+python -c "from config import Config; print('SUNAPI Kamera Desteği:', Config.USE_SUNAPI_CAMERAS)" 2>nul
+if %errorlevel% equ 0 (
+    echo SUNAPI konfigurasyonu basarili!
+) else (
+    echo SUNAPI konfigurasyonu test edilemedi.
+)
+
+echo.
+echo ========================================
+echo    Kurulum ve Konfigurasyon Tamamlandi!
+echo ========================================
+echo.
+echo Sonraki adimlar:
+echo 1. .env dosyasinda kamera bilgilerini guncelleyin
+echo 2. test_sunaapi_camera.py ile baglantiyi test edin
+echo 3. main.py ile ana sistemi calistirin
+echo.
+echo Detayli bilgi icin: SUNAPI_CAMERA_README.md
+echo.
+echo SUNAPI Kamera Desteği Kurulumu Tamamlandi!
+echo Artik SUNAPI dokümantasyonuna göre kamera erisimi saglayabilirsiniz.
+echo.
+
+pause
