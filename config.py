@@ -61,8 +61,8 @@ class Config:
     USE_NETWORK_CAMERAS = os.getenv('USE_NETWORK_CAMERAS', 'False').lower() == 'true'
     NETWORK_CAMERAS = {
         'camera_1': {
-            'url': os.getenv('CAMERA_1_URL', '192.168.1.100'),
-            'type': os.getenv('CAMERA_1_TYPE', 'auto'),  # 'rtsp', 'http', 'ip', 'auto'
+            'url': os.getenv('CAMERA_1_URL', '192.168.1.121'),  # Sizin kamera IP'niz
+            'type': os.getenv('CAMERA_1_TYPE', 'sunaapi'),  # 'rtsp', 'http', 'ip', 'auto', 'sunaapi'
             'username': os.getenv('CAMERA_1_USERNAME', None),
             'password': os.getenv('CAMERA_1_PASSWORD', None),
             'enabled': True
@@ -73,6 +73,21 @@ class Config:
             'username': os.getenv('CAMERA_2_USERNAME', None),
             'password': os.getenv('CAMERA_2_PASSWORD', None),
             'enabled': False
+        }
+    }
+    
+    # SUNAPI Kamera Desteği - SUNAPI dokümantasyonuna göre
+    USE_SUNAPI_CAMERAS = os.getenv('USE_SUNAPI_CAMERAS', 'True').lower() == 'true'
+    SUNAPI_CAMERAS = {
+        'sunaapi_camera_1': {
+            'ip': os.getenv('SUNAPI_CAMERA_1_IP', '192.168.1.121'),
+            'port': int(os.getenv('SUNAPI_CAMERA_1_PORT', '554')),
+            'channel_id': int(os.getenv('SUNAPI_CAMERA_1_CHANNEL', '0')),
+            'profile_id': int(os.getenv('SUNAPI_CAMERA_1_PROFILE', '1')),
+            'encoding': os.getenv('SUNAPI_CAMERA_1_ENCODING', 'h264'),
+            'username': os.getenv('SUNAPI_CAMERA_1_USERNAME', None),
+            'password': os.getenv('SUNAPI_CAMERA_1_PASSWORD', None),
+            'enabled': True
         }
     }
     

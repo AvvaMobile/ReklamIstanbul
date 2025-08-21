@@ -19,10 +19,12 @@ except ImportError:
 
 # Network kamera modülünü import et
 try:
-    from network_camera import NetworkCameraManager
+    from network_camera import NetworkCameraManager, SUNAPICamera
     NETWORK_CAMERA_AVAILABLE = True
+    SUNAPI_CAMERA_AVAILABLE = True
 except ImportError:
     NETWORK_CAMERA_AVAILABLE = False
+    SUNAPI_CAMERA_AVAILABLE = False
     print("Uyarı: network_camera modülü bulunamadı. Network kamera özelliği devre dışı.")
 
 # Global değişkenler
@@ -38,6 +40,11 @@ def signal_handler(sig, frame):
     global running, screen_capture, network_camera_manager
     print('\nProgram kapatılıyor...')
     running = False
+    
+    # SUNAPI kamera'yı durdur
+    if 'video_source' in globals() and hasattr(video_source, 'release'):
+        video_source.release()
+        print("SUNAPI kamera durduruldu")
     
     # Network kameraları durdur
     if network_camera_manager:
@@ -111,6 +118,43 @@ def setup_video_source(logger):
         else:
             logger.warning("Hiçbir network kamera başlatılamadı, ekran yakalama kullanılıyor")
     
+    # SUNAPI kamera desteği
+    if Config.USE_SUNAPI_CAMERAS and SUNAPI_CAMERA_AVAILABLE:
+        logger.info("SUNAPI kamera desteği aktif")
+        
+        # SUNAPI kameraları ekle
+        for camera_id, camera_config in Config.SUNAPI_CAMERAS.items():
+            if camera_config.get('enabled', False):
+                logger.info(f"SUNAPI kamera {camera_id} yapılandırılıyor: {camera_config['ip']}")
+                
+                # SUNAPI kamera oluştur
+                sunapi_camera = SUNAPICamera(
+                    ip_address=camera_config['ip'],
+                    port=camera_config['port'],
+                    channel_id=camera_config['channel_id'],
+                    profile_id=camera_config['profile_id'],
+                    encoding=camera_config['encoding'],
+                    username=camera_config.get('username'),
+                    password=camera_config.get('password')
+                )
+                
+                # Test bağlantısı
+                if sunapi_camera.connect('profile'):
+                    logger.info(f"SUNAPI kamera {camera_id} bağlantısı başarılı")
+                    return sunapi_camera
+                else:
+                    logger.warning(f"SUNAPI kamera {camera_id} bağlantısı başarısız, diğer formatlar deneniyor...")
+                    
+                    # Alternatif formatları dene
+                    for format_type in ['live_channel', 'multicast', 'basic']:
+                        if sunapi_camera.connect(format_type):
+                            logger.info(f"SUNAPI kamera {camera_id} {format_type} formatında bağlandı")
+                            return sunapi_camera
+                    
+                    logger.error(f"SUNAPI kamera {camera_id} hiçbir format ile bağlanamadı")
+        
+        logger.warning("Hiçbir SUNAPI kamera başlatılamadı, ekran yakalama kullanılıyor")
+    
     if Config.USE_SCREEN_CAPTURE and SCREEN_CAPTURE_AVAILABLE:
         # Ekran yakalama kullan
         global screen_capture
@@ -174,7 +218,12 @@ def main():
         logger.warning("Endpoint bağlantısı başarısız - veriler sadece yerel olarak kaydedilecek")
     
     # Video kaynağı bilgilerini logla
-    if Config.USE_NETWORK_CAMERAS and network_camera_manager:
+    if isinstance(video_source, SUNAPICamera):
+        logger.info("İnsan sayma sistemi başlatıldı (SUNAPI kamera modu)")
+        logger.info(f"SUNAPI Kamera: {video_source.ip_address}:{video_source.port}")
+        logger.info(f"Kanal: {video_source.channel_id}, Profil: {video_source.profile_id}")
+        logger.info(f"Encoding: {video_source.encoding}")
+    elif Config.USE_NETWORK_CAMERAS and network_camera_manager:
         logger.info("İnsan sayma sistemi başlatıldı (Network kamera modu)")
         cameras = network_camera_manager.get_all_cameras()
         logger.info(f"Toplam {len(cameras)} network kamera aktif")
@@ -204,8 +253,16 @@ def main():
     previous_detections = []
     
     while running:
-        # Frame oku - Network kamera, ekran yakalama veya kamera
-        if Config.USE_NETWORK_CAMERAS and network_camera_manager:
+        # Frame oku - SUNAPI kamera, Network kamera, ekran yakalama veya kamera
+        if isinstance(video_source, SUNAPICamera):
+            # SUNAPI kamera'dan frame al
+            ret, frame = video_source.read_frame()
+            if not ret:
+                logger.warning("SUNAPI kamera'dan frame alınamıyor!")
+                time.sleep(0.1)
+                continue
+                
+        elif Config.USE_NETWORK_CAMERAS and network_camera_manager:
             # Network kamera'dan frame al (ilk aktif kameradan)
             cameras = network_camera_manager.get_all_cameras()
             frame = None
