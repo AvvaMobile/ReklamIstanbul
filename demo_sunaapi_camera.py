@@ -2,6 +2,7 @@
 """
 SUNAPI Kamera Demo Script'i
 SUNAPI kamera desteğini gösterir
+RTSP URL: rtsp://192.168.1.100:554/H.264/media.smp
 """
 
 import cv2
@@ -13,14 +14,22 @@ def demo_sunaapi_camera():
     print("🚀 SUNAPI Kamera Demo")
     print("=" * 50)
     
-    # Kamera bilgileri
-    ip_address = "192.168.1.121"  # Test için, gerçek IP ile değiştirin
+    # Kamera bilgileri - belirtilen RTSP URL için
+    ip_address = "192.168.1.100"  # Belirtilen IP adresi
+    port = 554  # Belirtilen port
+    encoding = "H.264"  # Belirtilen encoding
     username = None  # Gerekirse kullanıcı adı
     password = None  # Gerekirse şifre
     
     print(f"📡 Kamera IP: {ip_address}")
+    print(f"🔌 Port: {port}")
+    print(f"🎬 Encoding: {encoding}")
     print(f"👤 Kullanıcı: {username or 'Yok'}")
     print(f"🔒 Şifre: {'***' if password else 'Yok'}")
+    
+    # Hedef RTSP URL
+    target_url = f"rtsp://{ip_address}:{port}/{encoding}/media.smp"
+    print(f"🎯 Hedef URL: {target_url}")
     
     # 1. SUNAPICamera sınıfı demo
     print("\n1️⃣ SUNAPICamera Sınıfı Demo")
@@ -28,6 +37,8 @@ def demo_sunaapi_camera():
     
     camera = SUNAPICamera(
         ip_address=ip_address,
+        port=port,
+        encoding=encoding,
         username=username,
         password=password
     )
@@ -39,7 +50,7 @@ def demo_sunaapi_camera():
     
     # Test URL'leri oluştur
     print("\n🔗 Test URL'leri:")
-    test_formats = ['profile', 'live_channel', 'multicast']
+    test_formats = ['basic', 'profile', 'live_channel', 'multicast']
     for fmt in test_formats:
         url = camera.get_rtsp_url(fmt)
         print(f"   {fmt}: {url}")
@@ -65,9 +76,9 @@ def demo_sunaapi_camera():
     test_connection = input("Bağlantı testi yapmak istiyor musunuz? (y/n): ").strip().lower()
     
     if test_connection == 'y':
-        print("🔗 Profile formatında bağlantı testi...")
+        print("🔗 Basic formatında bağlantı testi (H.264/media.smp)...")
         
-        if camera.connect('profile'):
+        if camera.connect('basic'):
             print("✅ Bağlantı başarılı!")
             
             # Frame okuma testi
@@ -88,21 +99,55 @@ def demo_sunaapi_camera():
     
     print("\n✅ Demo tamamlandı!")
     print("\n📋 Kullanım Örnekleri:")
-    print("   # SUNAPI kamera oluştur")
-    print("   camera = SUNAPICamera('192.168.1.121')")
+    print("   # SUNAPI kamera oluştur (H.264/media.smp formatında)")
+    print("   camera = SUNAPICamera('192.168.1.100', port=554, encoding='H.264')")
     print("   ")
-    print("   # Farklı formatlarda bağlan")
-    print("   camera.connect('profile')      # rtsp://ip:554/profile1/media.smp")
-    print("   camera.connect('live_channel') # rtsp://ip:558/LiveChannel/0/media.smp")
-    print("   camera.connect('multicast')    # rtsp://ip:554/multicast/h264/media.smp")
+    print("   # Basic formatında bağlan (rtsp://192.168.1.100:554/H.264/media.smp)")
+    print("   camera.connect('basic')")
     print("   ")
     print("   # NetworkCamera ile SUNAPI mod")
-    print("   camera = NetworkCamera('192.168.1.121', camera_type='sunaapi')")
+    print("   camera = NetworkCamera('192.168.1.100', camera_type='sunaapi')")
+    print("   ")
+    print("   # Doğrudan RTSP URL ile")
+    print("   camera = NetworkCamera('rtsp://192.168.1.100:554/H.264/media.smp')")
+
+def test_specific_rtsp_url():
+    """Belirtilen RTSP URL ile test"""
+    print("\n🎯 Belirtilen RTSP URL Testi")
+    print("=" * 40)
+    
+    rtsp_url = "rtsp://192.168.1.100:554/H.264/media.smp"
+    print(f"Test edilen URL: {rtsp_url}")
+    
+    # NetworkCamera ile test
+    camera = NetworkCamera(rtsp_url, camera_type='rtsp')
+    
+    if camera.connect():
+        print("✅ RTSP bağlantısı başarılı!")
+        
+        # Frame okuma testi
+        print("📸 Frame okuma testi...")
+        for i in range(3):
+            ret, frame = camera.read()
+            if ret:
+                print(f"   Frame {i+1}: ✅ {frame.shape}")
+            else:
+                print(f"   Frame {i+1}: ❌ Okunamadı")
+            time.sleep(0.5)
+        
+        camera.stop_capture()
+    else:
+        print("❌ RTSP bağlantısı başarısız!")
+        camera.stop_capture()
 
 def main():
     """Ana fonksiyon"""
     try:
         demo_sunaapi_camera()
+        
+        # Belirtilen RTSP URL ile ek test
+        test_specific_rtsp_url()
+        
     except KeyboardInterrupt:
         print("\n\n⏹️ Demo kullanıcı tarafından durduruldu.")
     except Exception as e:

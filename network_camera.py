@@ -54,7 +54,8 @@ class SUNAPICamera:
             'channel_profile': f"rtsp://{ip_address}:{port}/{{chid}}/profile{{profile}}/media.smp",
             'live_channel': f"rtsp://{ip_address}:558/LiveChannel/{{chid}}/media.smp",
             'multicast': f"rtsp://{ip_address}:{port}/multicast/{{encoding}}/media.smp",
-            'multicast_profile': f"rtsp://{ip_address}:{port}/multicast/profile{{profile}}/media.smp"
+            'multicast_profile': f"rtsp://{ip_address}:{port}/multicast/profile{{profile}}/media.smp",
+            'custom_h264': f"rtsp://{ip_address}:{port}/H.264/media.smp"  # Özel H.264 formatı
         }
         
         self.logger.info(f"SUNAPI kamera başlatıldı: {ip_address}:{port}")
@@ -93,6 +94,8 @@ class SUNAPICamera:
         elif format_type == 'multicast_profile':
             profile = kwargs.get('profile', self.profile_id)
             url = self.sunaapi_formats['multicast_profile'].format(profile=profile)
+        elif format_type == 'custom_h264':
+            url = self.sunaapi_formats['custom_h264']
         else:
             url = self.sunaapi_formats['profile'].format(profile=self.profile_id)
         
