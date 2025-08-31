@@ -3,57 +3,31 @@ import time
 import signal
 import sys
 import threading
+import os
 from datetime import datetime
 from human_detector import HumanDetector
 from counter import HumanCounter
 from config import Config
+from network_camera import RTSPCamera
 import logging
-
-# Ekran yakalama modülünü import et
-try:
-    from screen_capture import ScreenCapture
-    SCREEN_CAPTURE_AVAILABLE = True
-except ImportError:
-    SCREEN_CAPTURE_AVAILABLE = False
-    print("Uyarı: screen_capture modülü bulunamadı. Ekran yakalama özelliği devre dışı.")
-
-# Network kamera modülünü import et
-try:
-    from network_camera import NetworkCameraManager, SUNAPICamera
-    NETWORK_CAMERA_AVAILABLE = True
-    SUNAPI_CAMERA_AVAILABLE = True
-except ImportError:
-    NETWORK_CAMERA_AVAILABLE = False
-    SUNAPI_CAMERA_AVAILABLE = False
-    print("Uyarı: network_camera modülü bulunamadı. Network kamera özelliği devre dışı.")
 
 # Global değişkenler
 counter = None
 running = True
-screen_capture = None
-network_camera_manager = None
+rtsp_camera = None
 
 def signal_handler(sig, frame):
     """
     Program kapatılırken verileri kaydet
     """
-    global running, screen_capture, network_camera_manager
+    global running, rtsp_camera
     print('\nProgram kapatılıyor...')
     running = False
     
-    # SUNAPI kamera'yı durdur
-    if 'video_source' in globals() and hasattr(video_source, 'release'):
-        video_source.release()
-        print("SUNAPI kamera durduruldu")
-    
-    # Network kameraları durdur
-    if network_camera_manager:
-        network_camera_manager.stop_all()
-        print("Network kameralar durduruldu")
-    
-    # Ekran yakalamayı durdur
-    if screen_capture:
-        screen_capture.stop_capture()
+    # RTSP kamera'yı durdur
+    if rtsp_camera:
+        rtsp_camera.stop_capture()
+        print("RTSP kamera durduruldu")
     
     if counter:
         counter.save_daily_count()
@@ -75,122 +49,28 @@ def setup_logging():
     )
     return logging.getLogger(__name__)
 
-def test_camera(camera_index):
+def setup_rtsp_camera(logger):
     """
-    Kameranın çalışıp çalışmadığını test eder
+    RTSP kamera kaynağını ayarlar
     """
-    cap = cv2.VideoCapture(camera_index)
-    if not cap.isOpened():
-        return False
+    logger.info("RTSP kamera başlatılıyor...")
     
-    ret, frame = cap.read()
-    cap.release()
-    return ret
-
-def setup_video_source(logger):
-    """
-    Video kaynağını ayarlar (kamera, ekran yakalama veya network kamera)
-    """
-    if Config.USE_NETWORK_CAMERAS and NETWORK_CAMERA_AVAILABLE:
-        # Network kamera kullan
-        global network_camera_manager
-        network_camera_manager = NetworkCameraManager()
-        
-        # Konfigürasyondaki kameraları ekle
-        for camera_id, camera_config in Config.NETWORK_CAMERAS.items():
-            if camera_config.get('enabled', False):
-                camera = network_camera_manager.add_camera(
-                    camera_id,
-                    camera_config['url'],
-                    camera_config['type'],
-                    camera_config.get('username'),
-                    camera_config.get('password')
-                )
-                
-                if camera.start_capture():
-                    logger.info(f"Network kamera {camera_id} başlatıldı: {camera_config['url']}")
-                else:
-                    logger.warning(f"Network kamera {camera_id} başlatılamadı: {camera_config['url']}")
-        
-        if network_camera_manager.get_all_cameras():
-            logger.info("Network kamera sistemi başlatıldı")
-            return network_camera_manager
-        else:
-            logger.warning("Hiçbir network kamera başlatılamadı, ekran yakalama kullanılıyor")
+    # RTSP kamera oluştur
+    camera = RTSPCamera()
     
-    # SUNAPI kamera desteği
-    if Config.USE_SUNAPI_CAMERAS and SUNAPI_CAMERA_AVAILABLE:
-        logger.info("SUNAPI kamera desteği aktif")
-        
-        # SUNAPI kameraları ekle
-        for camera_id, camera_config in Config.SUNAPI_CAMERAS.items():
-            if camera_config.get('enabled', False):
-                logger.info(f"SUNAPI kamera {camera_id} yapılandırılıyor: {camera_config['ip']}")
-                
-                # SUNAPI kamera oluştur
-                sunapi_camera = SUNAPICamera(
-                    ip_address=camera_config['ip'],
-                    port=camera_config['port'],
-                    channel_id=camera_config['channel_id'],
-                    profile_id=camera_config['profile_id'],
-                    encoding=camera_config['encoding'],
-                    username=camera_config.get('username'),
-                    password=camera_config.get('password')
-                )
-                
-                # Test bağlantısı
-                if sunapi_camera.connect('profile'):
-                    logger.info(f"SUNAPI kamera {camera_id} bağlantısı başarılı")
-                    return sunapi_camera
-                else:
-                    logger.warning(f"SUNAPI kamera {camera_id} bağlantısı başarısız, diğer formatlar deneniyor...")
-                    
-                    # Alternatif formatları dene
-                    for format_type in ['live_channel', 'multicast', 'basic']:
-                        if sunapi_camera.connect(format_type):
-                            logger.info(f"SUNAPI kamera {camera_id} {format_type} formatında bağlandı")
-                            return sunapi_camera
-                    
-                    logger.error(f"SUNAPI kamera {camera_id} hiçbir format ile bağlanamadı")
-        
-        logger.warning("Hiçbir SUNAPI kamera başlatılamadı, ekran yakalama kullanılıyor")
-    
-    if Config.USE_SCREEN_CAPTURE and SCREEN_CAPTURE_AVAILABLE:
-        # Ekran yakalama kullan
-        global screen_capture
-        screen_capture = ScreenCapture(
-            monitor=Config.SCREEN_MONITOR,
-            region=Config.SCREEN_REGION
-        )
-        screen_capture.start_capture()
-        
-        # İlk frame'i bekle - süreyi kısalt
-        time.sleep(0.5)  # 1 saniyeden 0.5 saniyeye düşür
-        
-        logger.info("Ekran yakalama başlatıldı")
-        return screen_capture
+    if camera.connect():
+        logger.info("✅ RTSP kamera bağlantısı başarılı!")
+        logger.info(f"RTSP URL: {Config.RTSP_URL}")
+        logger.info(f"IP: {Config.RTSP_IP}")
+        logger.info(f"Port: {Config.RTSP_PORT}")
+        logger.info(f"Encoding: {Config.RTSP_ENCODING}")
+        return camera
     else:
-        # Kamera kullan
-        if not test_camera(Config.CAMERA_INDEX):
-            logger.error(f"Kamera {Config.CAMERA_INDEX} açılamadı!")
-            return None
-        
-        cap = cv2.VideoCapture(Config.CAMERA_INDEX)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, Config.FRAME_WIDTH)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.FRAME_HEIGHT)
-        # FPS kısıtlaması yok - maksimum hızda çalış
-        cap.set(cv2.CAP_PROP_FPS, 0)  # 0 = maksimum FPS
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        
-        if not cap.isOpened():
-            logger.error("Kamera açılamadı!")
-            return None
-        
-        logger.info("Kamera başlatıldı")
-        return cap
+        logger.error("❌ RTSP kamera bağlantısı başarısız!")
+        return None
 
 def main():
-    global counter, running, screen_capture
+    global counter, running, rtsp_camera
     
     # Sinyal handler'ı ayarla
     signal.signal(signal.SIGINT, signal_handler)
@@ -198,17 +78,17 @@ def main():
     # Logging ayarları
     logger = setup_logging()
     
-    # Video kaynağını ayarla
-    video_source = setup_video_source(logger)
-    if video_source is None:
-        logger.error("Video kaynağı başlatılamadı!")
+    # RTSP kamera kaynağını ayarla
+    rtsp_camera = setup_rtsp_camera(logger)
+    if rtsp_camera is None:
+        logger.error("RTSP kamera başlatılamadı!")
         return
     
     # Modülleri başlat
     detector = HumanDetector()
     counter = HumanCounter(
-        device_id=Config.DEVICE_ID if hasattr(Config, 'DEVICE_ID') else 'default',
-        location=Config.LOCATION if hasattr(Config, 'LOCATION') else 'unknown'
+        device_id=Config.DEVICE_ID,
+        location=Config.LOCATION
     )
     
     # Endpoint bağlantısını test et
@@ -217,26 +97,11 @@ def main():
     else:
         logger.warning("Endpoint bağlantısı başarısız - veriler sadece yerel olarak kaydedilecek")
     
-    # Video kaynağı bilgilerini logla
-    if isinstance(video_source, SUNAPICamera):
-        logger.info("İnsan sayma sistemi başlatıldı (SUNAPI kamera modu)")
-        logger.info(f"SUNAPI Kamera: {video_source.ip_address}:{video_source.port}")
-        logger.info(f"Kanal: {video_source.channel_id}, Profil: {video_source.profile_id}")
-        logger.info(f"Encoding: {video_source.encoding}")
-    elif Config.USE_NETWORK_CAMERAS and network_camera_manager:
-        logger.info("İnsan sayma sistemi başlatıldı (Network kamera modu)")
-        cameras = network_camera_manager.get_all_cameras()
-        logger.info(f"Toplam {len(cameras)} network kamera aktif")
-        for camera_id, camera in cameras.items():
-            info = camera.get_camera_info()
-            logger.info(f"  - {camera_id}: {info['url']} ({info['type']})")
-    elif Config.USE_SCREEN_CAPTURE:
-        logger.info("İnsan sayma sistemi başlatıldı (Ekran yakalama modu)")
-        screen_info = screen_capture.get_screen_info()
-        logger.info(f"Ekran boyutu: {screen_info['width']}x{screen_info['height']}")
-        logger.info(f"Ekran FPS: {screen_info['fps']}")
-    else:
-        logger.info("İnsan sayma sistemi başlatıldı (Kamera modu)")
+    # RTSP kamera bilgilerini logla
+    logger.info("İnsan sayma sistemi başlatıldı (RTSP kamera modu)")
+    logger.info(f"RTSP URL: {Config.RTSP_URL}")
+    logger.info(f"IP: {Config.RTSP_IP}:{Config.RTSP_PORT}")
+    logger.info(f"Encoding: {Config.RTSP_ENCODING}")
     
     logger.info("Çıkmak için 'q' tuşuna basın.")
     logger.info(f"Saatlik sıfırlama: {'Aktif' if Config.HOURLY_RESET else 'Pasif'}")
@@ -252,37 +117,18 @@ def main():
     # Önceki tespitleri sakla (tracking için)
     previous_detections = []
     
+    # RTSP kamera yakalamayı başlat
+    if not rtsp_camera.start_capture():
+        logger.error("RTSP kamera yakalama başlatılamadı!")
+        return
+    
     while running:
-        # Frame oku - SUNAPI kamera, Network kamera, ekran yakalama veya kamera
-        if isinstance(video_source, SUNAPICamera):
-            # SUNAPI kamera'dan frame al
-            ret, frame = video_source.read_frame()
-            if not ret:
-                logger.warning("SUNAPI kamera'dan frame alınamıyor!")
-                time.sleep(0.1)
-                continue
-                
-        elif Config.USE_NETWORK_CAMERAS and network_camera_manager:
-            # Network kamera'dan frame al (ilk aktif kameradan)
-            cameras = network_camera_manager.get_all_cameras()
-            frame = None
-            
-            for camera_id, camera in cameras.items():
-                if camera.is_running:
-                    ret, cam_frame = camera.read()
-                    if ret:
-                        frame = cam_frame
-                        break
-            
-            if frame is None:
-                logger.warning("Network kamera'dan frame alınamıyor!")
-                time.sleep(0.1)
-                continue
-                
-        elif Config.USE_SCREEN_CAPTURE:
-            ret, frame = video_source.read()
-        else:
-            ret, frame = video_source.read()
+        # RTSP kamera'dan frame al
+        ret, frame = rtsp_camera.read()
+        if not ret:
+            logger.warning("RTSP kamera'dan frame alınamıyor!")
+            time.sleep(0.1)
+            continue
         
         if frame is None:
             logger.error("Frame okunamadı!")
@@ -310,7 +156,7 @@ def main():
         # İnsanları say
         frame, hourly_count, daily_count = counter.count_humans(detections, frame)
         
-        # Bilgileri ekrana yaz - İyileştirilmiş
+        # Bilgileri ekrana yaz
         cv2.putText(frame, f'Saatlik Sayim: {hourly_count}', 
                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         
@@ -324,9 +170,8 @@ def main():
         cv2.putText(frame, f'FPS: {current_fps:.1f}', 
                    (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         
-        # Video kaynağı bilgisi
-        source_info = "Ekran Yakalama" if Config.USE_SCREEN_CAPTURE else "Kamera"
-        cv2.putText(frame, f'Kaynak: {source_info}', 
+        # RTSP kamera bilgisi
+        cv2.putText(frame, f'RTSP: {Config.RTSP_IP}:{Config.RTSP_PORT}', 
                    (10, 190), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
         # Tarih ve saat bilgisini ekle
@@ -342,7 +187,7 @@ def main():
                        (10, 230), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
         
         # Frame'i göster
-        window_title = 'Human Counter - Screen Capture' if Config.USE_SCREEN_CAPTURE else 'Human Counter - Camera'
+        window_title = 'Human Counter - RTSP Camera'
         cv2.imshow(window_title, frame)
         
         # 'q' tuşuna basılırsa çık
@@ -353,10 +198,8 @@ def main():
         time.sleep(0.01)
     
     # Temizlik
-    if Config.USE_SCREEN_CAPTURE and screen_capture:
-        screen_capture.stop_capture()
-    else:
-        video_source.release()
+    if rtsp_camera:
+        rtsp_camera.stop_capture()
     
     cv2.destroyAllWindows()
     
@@ -365,5 +208,4 @@ def main():
         logger.info("Program kapatıldı ve veriler kaydedildi.")
 
 if __name__ == "__main__":
-    import os
     main() 

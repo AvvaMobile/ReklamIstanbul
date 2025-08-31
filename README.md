@@ -1,289 +1,183 @@
-# AvvaImageAI - İnsan Sayma Sistemi
+# RTSP Kamera ile İnsan Sayma Sistemi
 
-Gelişmiş performans optimizasyonları ve ekran yakalama desteği ile insan sayma sistemi.
+Bu proje, `rtsp://192.168.1.100:554/H.264/media.smp` RTSP URL'i üzerinden kamera görüntüsünü okuyarak insan sayma işlevi gerçekleştirir.
 
-## 🚀 Yeni Özellikler
+## 🎯 Özellikler
 
-### Performans İyileştirmeleri
-- **GPU Desteği**: CUDA ile hızlandırılmış işlem
-- **Model Optimizasyonu**: YOLOv8n modeli ile daha hızlı tespit
-- **Frame Atlama**: Performans için akıllı frame işleme
-- **Tracking**: Gelişmiş insan takip sistemi
-- **Bellek Optimizasyonu**: Düşük bellek kullanımı
-- **FPS Optimizasyonu**: 25 FPS ekran yakalama desteği
-- **Frame Boyut Optimizasyonu**: 480x360 boyutunda hızlı işleme
+- ✅ **RTSP Kamera Desteği**: Sabit URL ile kamera bağlantısı
+- ✅ **İnsan Tespiti**: YOLOv8 modeli ile gerçek zamanlı tespit
+- ✅ **İnsan Sayma**: Saatlik, günlük ve toplam sayım
+- ✅ **Tracking**: İnsan takibi ile doğru sayım
+- ✅ **Web Arayüzü**: Flask tabanlı web UI
+- ✅ **Veri Kaydetme**: Günlük sayım verilerini kaydetme
 
-### 🖥️ Ekran Yakalama Desteği
-- **Kamera Alternatifi**: Ekran görüntüsü ile insan sayma
-- **Bölge Seçimi**: Belirli alanları izleme
-- **Çoklu Monitör**: Birden fazla ekran desteği
-- **Performans Optimizasyonu**: Düşük CPU kullanımı
-- **Yüksek FPS**: 25 FPS ekran yakalama
-- **Thread Optimizasyonu**: Verimli frame yakalama
+## 🚀 Hızlı Başlangıç
 
-### Model Seçenekleri
-- `yolov8n.pt`: Nano - Hızlı, küçük
-- `yolov8s.pt`: Small - Dengeli (varsayılan)
-- `yolov8m.pt`: Medium - Orta performans
-- `yolov8l.pt`: Large - Yüksek doğruluk
-- `yolov8x.pt`: XLarge - En yüksek doğruluk
+### 1. Gereksinimler
 
-## 📦 Kurulum
-
-### 🚀 Hızlı Kurulum
-
-#### Windows
 ```bash
-# Otomatik kurulum (çift tıklayın)
-install_windows.bat
-
-# Manuel kurulum
-python -m venv venv
-venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-#### macOS/Linux
-```bash
-# Otomatik kurulum
-./install_unix.sh
+### 2. RTSP Kamera Testi
 
-# Manuel kurulum
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+```bash
+python test_rtsp_simple.py
 ```
 
-### 🧪 Sistem Testi
-```bash
-# Hızlı sistem testi
-python3 quick_start.py
+### 3. Ana Uygulama
 
-# Manuel test
-python3 test_screen_capture.py
-python3 performance_test.py
+```bash
+python main.py
 ```
 
-### 📚 Detaylı Kurulum
-Detaylı kurulum rehberi için [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) dosyasını inceleyin.
+### 4. Web Arayüzü
+
+```bash
+python app.py
+```
+
+## 📁 Proje Yapısı
+
+```
+AvvaImageAI/
+├── main.py                 # Ana uygulama (RTSP kamera)
+├── app.py                  # Web arayüzü (Flask)
+├── quick_start.py          # Hızlı başlangıç
+├── test_rtsp_simple.py    # RTSP kamera testi
+├── network_camera.py       # RTSP kamera sınıfı
+├── human_detector.py       # İnsan tespit modülü
+├── counter.py              # İnsan sayma modülü
+├── config.py               # Konfigürasyon
+├── requirements.txt        # Python bağımlılıkları
+└── README.md               # Bu dosya
+```
 
 ## ⚙️ Konfigürasyon
 
-### Çevre Değişkenleri
-`.env` dosyası oluşturun:
-```env
-USE_GPU=True
-USE_SCREEN_CAPTURE=True
-DEBUG=False
-ENDPOINT_URL=http://localhost:8000/api/count
-ENDPOINT_API_KEY=your_api_key
-```
-
-### Performans Ayarları
-`config.py` dosyasında performans parametrelerini ayarlayabilirsiniz:
+`config.py` dosyasında RTSP kamera ayarları:
 
 ```python
-# Model performans ayarları - MVP için optimize edilmiş
-MODEL_CONFIDENCE = 0.5  # Model güven eşiği (daha az false positive)
-MODEL_IOU_THRESHOLD = 0.4  # IOU eşiği (daha hızlı)
-MODEL_MAX_DET = 20  # Maksimum tespit sayısı (daha hızlı)
+# RTSP Kamera Ayarları
+RTSP_URL = "rtsp://192.168.1.100:554/H.264/media.smp"
+RTSP_IP = "192.168.1.100"
+RTSP_PORT = 554
+RTSP_ENCODING = "H.264"
 
-# Performans optimizasyonları - MVP için optimize edilmiş
-PROCESS_EVERY_N_FRAMES = 1  # Her frame işlensin (performans için)
-SKIP_FRAMES_FOR_TRACKING = 1  # Takip için frame atlama
-
-# Ekran yakalama ayarları - MVP için optimize edilmiş
-USE_SCREEN_CAPTURE = True  # Ekran yakalama modu
-SCREEN_CAPTURE_FPS = 25    # Ekran yakalama FPS'i (yüksek performans)
-SCREEN_REGION = None        # Tüm ekran veya belirli bölge
-
-# Frame boyut ayarları - MVP için optimize edilmiş
-FRAME_WIDTH = 480   # Daha küçük boyut (performans için)
-FRAME_HEIGHT = 360  # Daha küçük boyut (performans için)
+# Kamera performans ayarları
+FRAME_WIDTH = 640
+FRAME_HEIGHT = 480
+CAMERA_FPS = 30
 ```
 
-## 🎯 Kullanım
+## 🔧 Kullanım
 
-### Kamera Modu
+### Komut Satırı
+
 ```bash
-# Kamera ile çalıştır
-python3 main.py
+# RTSP kamera testi
+python test_rtsp_simple.py
+
+# Ana uygulama
+python main.py
+
+# Web arayüzü
+python app.py
 ```
 
-### Ekran Yakalama Modu
-```bash
-# Ekran yakalama ile çalıştır
-# config.py'de USE_SCREEN_CAPTURE = True yapın
-python3 main.py
-```
+### Python API
 
-### Performans Testi
-```bash
-python3 performance_test.py
-```
-
-### Model Seçici
-```bash
-python3 model_selector.py
-```
-
-### Ekran Yakalama Testi
-```bash
-python3 test_screen_capture.py
-```
-
-## 📍 Ekran Yakalama Bölge Seçimi
-
-### Tüm Ekran
 ```python
-SCREEN_REGION = None
+from network_camera import RTSPCamera
+from human_detector import HumanDetector
+from counter import HumanCounter
+
+# RTSP kamera başlat
+camera = RTSPCamera()
+camera.connect()
+camera.start_capture()
+
+# İnsan tespit ve sayma
+detector = HumanDetector()
+counter = HumanCounter()
+
+while True:
+    ret, frame = camera.read()
+    if ret:
+        detections = detector.detect_humans(frame)
+        frame, hourly, daily = counter.count_humans(detections, frame)
+        
+        # Frame'i göster
+        cv2.imshow('Frame', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+camera.stop_capture()
 ```
 
-### Belirli Bölge
-```python
-# Format: (x, y, width, height)
-SCREEN_REGION = (0, 0, 800, 600)  # Sol üst köşeden 800x600
-SCREEN_REGION = (400, 300, 800, 600)  # Merkez bölge
-```
+## 📊 Çıktılar
 
-### Önceden Tanımlanmış Bölgeler
-```python
-from screen_config import ScreenConfig
+- **Saatlik Sayım**: Saat başına insan sayısı
+- **Günlük Sayım**: Günlük toplam insan sayısı
+- **Toplam Sayım**: Program başından beri toplam
+- **Aktif İnsanlar**: Şu anda görüntüde olan insanlar
 
-ScreenConfig.set_region('full_screen')    # Tüm ekran
-ScreenConfig.set_region('top_left')       # Sol üst köşe
-ScreenConfig.set_region('center')         # Merkez bölge
-ScreenConfig.set_region('small_region')   # Küçük bölge
-ScreenConfig.set_region('webcam_area')    # Webcam alanı
-```
+## 🌐 Web Arayüzü
 
-## 📊 Performans Metrikleri
+Web arayüzü `http://localhost:5000` adresinde çalışır:
 
-### Optimizasyon Öncesi
-- FPS: ~15-20
-- Bellek Kullanımı: ~800MB
-- Tespit Doğruluğu: %75-80
-- Ekran Yakalama: 10 FPS
-- Frame İşleme: Her 3 frame'den 1'i
+- **Ana Sayfa**: Canlı video stream
+- **API Endpoints**: JSON formatında veri
+- **Sistem Durumu**: RTSP bağlantı bilgileri
+- **Sayım Verileri**: Gerçek zamanlı istatistikler
 
-### Optimizasyon Sonrası (MVP)
-- FPS: ~25-35 (Kamera)
-- FPS: ~20-25 (Ekran Yakalama)
-- Bellek Kullanımı: ~500MB
-- Tespit Doğruluğu: %80-85
-- Ekran Yakalama: 25 FPS
-- Frame İşleme: Her frame işlenir
-- Frame Boyutu: 480x360 (daha hızlı)
+## ⚠️ Önemli Notlar
 
-### MVP Performans Özellikleri
-- **Yüksek FPS**: 25 FPS ekran yakalama
-- **Hızlı Model**: YOLOv8n (nano) modeli
-- **Optimize Frame**: 480x360 boyutunda işleme
-- **GPU Desteği**: Varsayılan olarak aktif
-- **Thread Optimizasyonu**: Verimli frame yakalama
-- **Akıllı İşleme**: Her frame işlenir
-
-## 🔧 Gelişmiş Ayarlar
-
-### GPU Kullanımı
-```python
-# config.py
-USE_GPU = True  # GPU kullanımını aktifleştir
-DEVICE = 'cuda' if USE_GPU else 'cpu'
-```
-
-### Model Seçimi
-```python
-# config.py
-MODEL_PATH = 'yolov8s.pt'  # Daha büyük model
-```
-
-### Tracking Parametreleri
-```python
-# config.py
-TRACKING_THRESHOLD = 30  # piksel - daha hassas takip
-SIZE_THRESHOLD = 0.4  # boyut farkı toleransı
-```
-
-### Ekran Yakalama Optimizasyonu
-```python
-# config.py
-SCREEN_CAPTURE_FPS = 10  # Düşük FPS performans için
-PROCESS_EVERY_N_FRAMES = 3  # Ekran yakalama için yavaş işleme
-```
-
-## 🎮 Kullanım Senaryoları
-
-### Video Konferans İzleme
-```python
-# Zoom/Teams penceresini izle
-SCREEN_REGION = (100, 100, 1280, 720)
-SCREEN_CAPTURE_FPS = 8
-```
-
-### Webcam Alanı İzleme
-```python
-# Webcam bölgesini izle
-SCREEN_REGION = (200, 200, 640, 480)
-SCREEN_CAPTURE_FPS = 10
-```
-
-### Belirli Uygulama İzleme
-```python
-# Belirli bir uygulama penceresini izle
-SCREEN_REGION = (0, 0, 1024, 768)
-SCREEN_CAPTURE_FPS = 5
-```
+1. **Ağ Erişimi**: 192.168.1.100 IP adresine erişim gerekli
+2. **Port Açık**: 554 portu açık olmalı
+3. **Kamera Aktif**: Kamera çalışır durumda olmalı
+4. **Codec Desteği**: H.264 codec desteği gerekli
 
 ## 🐛 Sorun Giderme
 
-### Düşük FPS
-1. GPU kullanımını kontrol edin
-2. Model boyutunu küçültün
-3. Frame işleme sıklığını azaltın
-4. Ekran yakalama için FPS'i düşürün
+### Bağlantı Hatası
+```bash
+# RTSP bağlantısını test et
+python test_rtsp_simple.py
+```
 
-### Yüksek Bellek Kullanımı
-1. `MODEL_MAX_DET` değerini düşürün
-2. Frame boyutunu küçültün
-3. Buffer boyutunu azaltın
+### Frame Okunamıyor
+- Kamera ayarlarını kontrol edin
+- Ağ bağlantısını test edin
+- Port 554'ün açık olduğundan emin olun
 
-### Yanlış Tespit
-1. `DETECTION_THRESHOLD` değerini artırın
-2. Daha büyük model kullanın
-3. Işık koşullarını iyileştirin
+### Performans Sorunları
+- FPS ayarlarını düşürün (`config.py`)
+- Frame boyutunu küçültün
+- Model güven eşiğini artırın
 
-### Ekran Yakalama Sorunları
-1. İzinleri kontrol edin
-2. `test_screen_capture.py` çalıştırın
-3. FPS'i düşürün
-4. Belirli bölge kullanın
+## 📝 Gereksinimler
 
-## 📝 Log Dosyaları
+- Python 3.9+
+- OpenCV
+- PyTorch
+- Ultralytics (YOLOv8)
+- Flask (web arayüzü için)
 
-Sistem logları `logs/` klasöründe saklanır:
-- `main.log`: Ana sistem logları
-- `counter.log`: Sayaç işlemleri
-- `endpoint.log`: Endpoint bağlantıları
+## 🔄 Güncellemeler
 
-## 📚 Ek Dokümantasyon
+- ✅ RTSP kamera desteği eklendi
+- ✅ Sabit URL konfigürasyonu
+- ✅ Gereksiz modüller kaldırıldı
+- ✅ Basitleştirilmiş kod yapısı
+- ✅ Web arayüzü güncellendi
 
-- [Ekran Yakalama Kılavuzu](SCREEN_CAPTURE_GUIDE.md): Detaylı ekran yakalama kullanımı
-- [Performans Testi](performance_test.py): Sistem performans testi
-- [Model Seçici](model_selector.py): Model performans karşılaştırması
+## 📞 Destek
 
-## 🤝 Katkıda Bulunma
+Sorun yaşarsanız:
 
-1. Fork yapın
-2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Commit yapın (`git commit -m 'Add amazing feature'`)
-4. Push yapın (`git push origin feature/amazing-feature`)
-5. Pull Request oluşturun
-
-## 📄 Lisans
-
-Bu proje MIT lisansı altında lisanslanmıştır.
-
-## 📞 İletişim
-
-Sorularınız için issue açabilir veya iletişime geçebilirsiniz. 
+1. `python test_rtsp_simple.py` ile test edin
+2. Hata mesajlarını kontrol edin
+3. Ağ bağlantısını test edin
+4. Kamera ayarlarını doğrulayın
+5. Port 554'ün açık olduğundan emin olun 

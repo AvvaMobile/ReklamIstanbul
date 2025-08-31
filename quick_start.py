@@ -1,157 +1,182 @@
 #!/usr/bin/env python3
 """
-Hızlı Başlangıç Scripti - Yeni bilgisayarlarda test için
+RTSP Kamera ile İnsan Sayma Sistemi - Hızlı Başlangıç
 """
 
+import cv2
+import time
+import signal
 import sys
-import os
-import subprocess
-import importlib
+from datetime import datetime
+from human_detector import HumanDetector
+from counter import HumanCounter
+from config import Config
+from network_camera import RTSPCamera
+import logging
 
-def check_python_version():
-    """Python versiyonunu kontrol eder"""
-    print("🐍 Python Versiyon Kontrolü...")
-    version = sys.version_info
-    if version.major < 3 or (version.major == 3 and version.minor < 9):
-        print(f"❌ Python 3.9+ gerekli! Mevcut: {version.major}.{version.minor}")
-        return False
-    else:
-        print(f"✅ Python {version.major}.{version.minor}.{version.micro} - Uygun!")
-        return True
+# Global değişkenler
+counter = None
+running = True
+rtsp_camera = None
 
-def check_dependencies():
-    """Gerekli modülleri kontrol eder"""
-    print("\n📦 Modül Kontrolü...")
+def signal_handler(sig, frame):
+    """Program kapatılırken verileri kaydet"""
+    global running, rtsp_camera
+    print('\nProgram kapatılıyor...')
+    running = False
     
-    required_modules = [
-        'cv2', 'ultralytics', 'torch', 'numpy', 
-        'requests', 'flask', 'PIL', 'psutil'
-    ]
+    if rtsp_camera:
+        rtsp_camera.stop_capture()
+        print("RTSP kamera durduruldu")
     
-    missing_modules = []
-    
-    for module in required_modules:
-        try:
-            importlib.import_module(module)
-            print(f"✅ {module} - Yüklü")
-        except ImportError:
-            print(f"❌ {module} - Eksik")
-            missing_modules.append(module)
-    
-    if missing_modules:
-        print(f"\n⚠️  Eksik modüller: {', '.join(missing_modules)}")
-        print("💡 Çözüm: pip install -r requirements.txt")
-        return False
-    else:
-        print("✅ Tüm modüller yüklü!")
-        return True
+    if counter:
+        counter.save_daily_count()
+    sys.exit(0)
 
-def check_model_files():
-    """Model dosyalarını kontrol eder"""
-    print("\n🤖 Model Dosya Kontrolü...")
-    
-    model_files = [
-        'yolov8n.pt', 'yolov8s.pt', 'yolov8m.pt', 'yolov8l.pt'
-    ]
-    
-    missing_models = []
-    
-    for model in model_files:
-        if os.path.exists(model):
-            size_mb = os.path.getsize(model) / (1024 * 1024)
-            print(f"✅ {model} - {size_mb:.1f}MB")
-        else:
-            print(f"❌ {model} - Eksik")
-            missing_models.append(model)
-    
-    if missing_models:
-        print(f"\n⚠️  Eksik model dosyaları: {', '.join(missing_models)}")
-        print("💡 Çözüm: Model dosyalarını proje klasörüne kopyalayın")
-        return False
-    else:
-        print("✅ Tüm model dosyaları mevcut!")
-        return True
-
-def check_system_info():
-    """Sistem bilgilerini gösterir"""
-    print("\n💻 Sistem Bilgileri...")
-    
-    import platform
-    import psutil
-    
-    print(f"OS: {platform.system()} {platform.release()}")
-    print(f"Python: {platform.python_version()}")
-    print(f"CPU: {psutil.cpu_count()} çekirdek")
-    print(f"RAM: {psutil.virtual_memory().total / (1024**3):.1f}GB")
-    
-    # GPU kontrolü
-    try:
-        import torch
-        if torch.cuda.is_available():
-            print(f"GPU: CUDA destekli ({torch.cuda.get_device_name(0)})")
-        else:
-            print("GPU: CUDA desteklenmiyor (CPU kullanılacak)")
-    except:
-        print("GPU: Torch kurulumu gerekli")
-
-def run_basic_test():
-    """Temel test çalıştırır"""
-    print("\n🧪 Temel Test Çalıştırılıyor...")
-    
-    try:
-        # Config testi
-        from config import Config
-        print(f"✅ Config yüklendi - Model: {Config.MODEL_PATH}")
-        
-        # Detector testi
-        from human_detector import HumanDetector
-        detector = HumanDetector()
-        print("✅ Human Detector başlatıldı")
-        
-        # Counter testi
-        from counter import HumanCounter
-        counter = HumanCounter()
-        print("✅ Human Counter başlatıldı")
-        
-        print("✅ Temel test başarılı!")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Temel test başarısız: {e}")
-        return False
+def setup_logging():
+    """Logging ayarlarını yapılandırır"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+    return logging.getLogger(__name__)
 
 def main():
     """Ana fonksiyon"""
-    print("🚀 AvvaImageAI - Hızlı Başlangıç Testi")
+    global counter, running, rtsp_camera
+    
+    # Sinyal handler'ı ayarla
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    # Logging ayarları
+    logger = setup_logging()
+    
+    print("🚀 RTSP Kamera ile İnsan Sayma Sistemi")
+    print("=" * 50)
+    print(f"🎯 RTSP URL: {Config.RTSP_URL}")
+    print(f"📡 IP: {Config.RTSP_IP}:{Config.RTSP_PORT}")
+    print(f"🎬 Encoding: {Config.RTSP_ENCODING}")
     print("=" * 50)
     
-    # Sistem kontrolleri
-    if not check_python_version():
-        return False
+    # RTSP kamera başlat
+    logger.info("RTSP kamera başlatılıyor...")
+    rtsp_camera = RTSPCamera()
     
-    if not check_dependencies():
-        return False
+    if not rtsp_camera.connect():
+        logger.error("❌ RTSP kamera bağlantısı başarısız!")
+        return
     
-    if not check_model_files():
-        return False
+    logger.info("✅ RTSP kamera bağlantısı başarılı!")
     
-    check_system_info()
+    # Kamera yakalamayı başlat
+    if not rtsp_camera.start_capture():
+        logger.error("❌ RTSP kamera yakalama başlatılamadı!")
+        return
     
-    # Temel test
-    if not run_basic_test():
-        return False
+    logger.info("✅ RTSP kamera yakalama başlatıldı")
     
-    print("\n" + "=" * 50)
-    print("🎉 Tüm testler başarılı! Sistem kullanıma hazır.")
-    print("\n📋 Sonraki adımlar:")
-    print("1. Kamera testi: python3 test_camera.py")
-    print("2. Ekran yakalama testi: python3 test_screen_capture.py")
-    print("3. Performans testi: python3 performance_test.py")
-    print("4. Ana uygulama: python3 main.py")
-    print("5. Web arayüzü: python3 app.py")
+    # Modülleri başlat
+    detector = HumanDetector()
+    counter = HumanCounter(
+        device_id=Config.DEVICE_ID,
+        location=Config.LOCATION
+    )
     
-    return True
+    logger.info("✅ İnsan sayma sistemi başlatıldı")
+    logger.info("Çıkmak için 'q' tuşuna basın veya Ctrl+C")
+    
+    frame_count = 0
+    start_time = time.time()
+    fps_start_time = time.time()
+    fps_frame_count = 0
+    current_fps = 0
+    
+    # Önceki tespitleri sakla (tracking için)
+    previous_detections = []
+    
+    while running:
+        # RTSP kamera'dan frame al
+        ret, frame = rtsp_camera.read()
+        if not ret:
+            logger.warning("RTSP kamera'dan frame alınamıyor!")
+            time.sleep(0.1)
+            continue
+        
+        if frame is None:
+            logger.error("Frame okunamadı!")
+            break
+        
+        frame_count += 1
+        fps_frame_count += 1
+        
+        # FPS hesaplama
+        if fps_frame_count % 30 == 0:
+            current_time = time.time()
+            elapsed_time = current_time - fps_start_time
+            current_fps = fps_frame_count / elapsed_time
+            fps_start_time = current_time
+            fps_frame_count = 0
+        
+        # İnsanları tespit et - Tracking ile
+        detections = detector.detect_humans_with_tracking(frame, previous_detections)
+        previous_detections = detections.copy()
+        
+        # Tespit edilen insanları çiz
+        frame = detector.draw_detections(frame, detections)
+        
+        # İnsanları say
+        frame, hourly_count, daily_count = counter.count_humans(detections, frame)
+        
+        # Bilgileri ekrana yaz
+        cv2.putText(frame, f'Saatlik Sayim: {hourly_count}', 
+                   (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        
+        cv2.putText(frame, f'Gunluk Sayim: {daily_count}', 
+                   (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+        
+        cv2.putText(frame, f'Toplam Sayim: {counter.total_count}', 
+                   (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+        
+        # FPS bilgisi
+        cv2.putText(frame, f'FPS: {current_fps:.1f}', 
+                   (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        
+        # RTSP kamera bilgisi
+        cv2.putText(frame, f'RTSP: {Config.RTSP_IP}:{Config.RTSP_PORT}', 
+                   (10, 190), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        
+        # Tarih ve saat bilgisini ekle
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cv2.putText(frame, current_time, 
+                   (10, frame.shape[0] - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        
+        # Debug bilgileri
+        if Config.DEBUG:
+            cv2.putText(frame, f'Detections: {len(detections)}', 
+                       (10, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+            cv2.putText(frame, f'Active People: {len(counter.active_people)}', 
+                       (10, 230), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+        
+        # Frame'i göster
+        window_title = 'Human Counter - RTSP Camera'
+        cv2.imshow(window_title, frame)
+        
+        # 'q' tuşuna basılırsa çık
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        
+        # Kısa bir bekleme
+        time.sleep(0.01)
+    
+    # Temizlik
+    if rtsp_camera:
+        rtsp_camera.stop_capture()
+    
+    cv2.destroyAllWindows()
+    
+    if counter:
+        counter.save_daily_count()
+        logger.info("Program kapatıldı ve veriler kaydedildi.")
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    main()
